@@ -1,0 +1,46 @@
+package gym.ada.api.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+@AllArgsConstructor
+public class ImagenUpdateDto {
+
+    private Long id;
+    private String url;
+    private String publicId;
+    private Boolean esPrincipal;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
+    }
+
+    public Boolean getEsPrincipal() {
+        return esPrincipal;
+    }
+
+    public void setEsPrincipal(Boolean esPrincipal) {
+        this.esPrincipal = esPrincipal;
+    }
+}
