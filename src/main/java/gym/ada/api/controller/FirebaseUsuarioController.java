@@ -43,11 +43,19 @@ public class FirebaseUsuarioController {
 
             return ResponseEntity.ok(usuarios);
 
-        } catch (Exception e) {
+        }  catch (Exception e) {
+            e.printStackTrace();
+
+            Throwable causa = e;
+            while (causa.getCause() != null) {
+                causa = causa.getCause();
+            }
+
             return ResponseEntity.internalServerError()
                     .body(Map.of(
                             "error", "No se pudieron listar los usuarios de Firebase",
-                            "detalle", e.getMessage()
+                            "detalle", e.getMessage(),
+                            "causaRaiz", causa.toString()
                     ));
         }
     }
