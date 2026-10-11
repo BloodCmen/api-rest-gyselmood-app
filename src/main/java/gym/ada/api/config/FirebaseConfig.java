@@ -33,7 +33,7 @@ public class FirebaseConfig {
                 // 2. Si es en local, leer el archivo desde el classpath
                 serviceAccount = getClass()
                         .getClassLoader()
-                        .getResourceAsStream("firebase/gyselmoodapp-firebase-adminsdk-fbsvc-5dfd0a881c.json");
+                        .getResourceAsStream("firebase/gyselmoodapp-firebase-adminsdk-fbsvc-8a48e3afc6.json");
             }
 
             if (serviceAccount == null) {
@@ -47,6 +47,10 @@ public class FirebaseConfig {
                     .build();
 
             FirebaseApp.initializeApp(options);
+            System.out.println(
+            	    "Firebase project ID: " +
+            	    FirebaseApp.getInstance().getOptions().getProjectId()
+            	);
 
             System.out.println("Firebase Admin inicializado correctamente");
 
