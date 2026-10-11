@@ -12,6 +12,8 @@ import gym.ada.api.service.IPagoService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 
 @Service
@@ -92,7 +94,8 @@ public class PagoServiceImplement implements IPagoService {
 
         Pago pago = pagoRepository.findByPedidoId(pedidoId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
                                 "El pedido no tiene un pago registrado"
                         )
                 );
