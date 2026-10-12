@@ -11,4 +11,6 @@ public interface IPedidoRepository extends JpaRepository<Pedido, Long> {
     List<Pedido> findByFirebaseUidOrderByFechaCreacionDesc(String firebaseUid);
 
     Optional<Pedido> findByIdAndFirebaseUid(Long id, String firebaseUid);
+    
+    List<Pedido> findAllByOrderByFechaCreacionDesc();
 }

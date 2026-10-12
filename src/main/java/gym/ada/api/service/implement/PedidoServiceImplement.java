@@ -166,6 +166,18 @@ public class PedidoServiceImplement implements IPedidoService {
 
         return convertirRespuesta(pedido);
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<PedidoResponseDto> listarTodosPedidos() {
+
+        List<Pedido> pedidos =
+                pedidoRepository.findAllByOrderByFechaCreacionDesc();
+
+        return pedidos.stream()
+                .map(this::convertirRespuesta)
+                .toList();
+    }
 
     @Override
     @Transactional
@@ -331,4 +343,6 @@ public class PedidoServiceImplement implements IPedidoService {
                 })
                 .toList();
     }
+    
+    
 }

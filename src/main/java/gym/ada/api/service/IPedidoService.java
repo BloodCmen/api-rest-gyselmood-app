@@ -22,4 +22,6 @@ public interface IPedidoService {
     void actualizarEstado(Long id, ActualizarEstadoPedidoDto dto);
     
     List<HistorialEstadoResponseDto> obtenerHistorial(Long id, String firebaseUid);
+    
+    List<PedidoResponseDto> listarTodosPedidos();
 }

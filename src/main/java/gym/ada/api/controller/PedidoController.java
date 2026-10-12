@@ -48,6 +48,14 @@ public class PedidoController {
                 pedidoService.listarPedidosUsuario(firebaseUid)
         );
     }
+    
+    @GetMapping("/admin/listar")
+    public ResponseEntity<List<PedidoResponseDto>> listarTodosPedidos() {
+
+        return ResponseEntity.ok(
+                pedidoService.listarTodosPedidos()
+        );
+    }
 
     // OBTENER UN PEDIDO
     @GetMapping("/{id}/usuario/{firebaseUid}")
@@ -94,5 +102,7 @@ public class PedidoController {
                 pedidoService.obtenerHistorial(id, firebaseUid)
         );
     }
+    
+    
     
 }
