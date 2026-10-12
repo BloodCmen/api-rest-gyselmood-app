@@ -14,4 +14,6 @@ public interface IPagoRepository extends JpaRepository<Pago, Long> {
     Optional<Pago> findByPedidoId(Long pedidoId);
 
     Optional<Pago> findByReferenciaExterna(String referenciaExterna); //para pasarella de pago
+
+    boolean existsByReferenciaExterna(String referenciaExterna);
 }
