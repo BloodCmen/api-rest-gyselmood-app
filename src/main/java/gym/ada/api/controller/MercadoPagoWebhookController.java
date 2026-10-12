@@ -2,6 +2,7 @@
 package gym.ada.api.controller;
 
 import java.nio.charset.StandardCharsets;
+import gym.ada.api.service.implement.MercadoPagoWebhookService;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.Locale;
@@ -16,6 +17,14 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/mercadopago/webhook")
 public class MercadoPagoWebhookController {
+	
+	private final MercadoPagoWebhookService webhookService;
+
+	public MercadoPagoWebhookController(
+	        MercadoPagoWebhookService webhookService
+	) {
+	    this.webhookService = webhookService;
+	}
 
     @PostMapping
     public ResponseEntity<Void> recibirNotificacion(
@@ -71,9 +80,11 @@ public class MercadoPagoWebhookController {
         System.out.println("Payment ID: " + paymentId);
         System.out.println("==================================");
 
-        // PRIMERA ETAPA:
-        // Solo validamos la recepcion.
-        // Aun NO registramos ni actualizamos pagos.
+        String resultado = webhookService.procesarPago(paymentId);
+
+        System.out.println(
+                "WEBHOOK RESULTADO: " + resultado
+        );
 
         return ResponseEntity.ok().build();
     }
