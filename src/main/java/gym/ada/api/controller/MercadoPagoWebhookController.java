@@ -47,6 +47,11 @@ public class MercadoPagoWebhookController {
 		System.out.println("========== WEBHOOK MERCADO PAGO ==========");
 
 		String secreto = System.getenv("MERCADOPAGO_WEBHOOK_SECRET");
+		
+		System.out.println(
+			    "Clave prueba tiene espacios externos: "
+			    + (secreto != null && !secreto.equals(secreto.trim()))
+			);
 
 		boolean recuperacionPruebas = Boolean.parseBoolean(System.getenv("MERCADOPAGO_TEST_RECONCILE_UNSIGNED"));
 
