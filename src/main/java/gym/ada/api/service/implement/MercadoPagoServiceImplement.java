@@ -100,11 +100,12 @@ public class MercadoPagoServiceImplement implements IMercadoPagoService {
         );
 
         Map<String, Object> request = Map.of(
-                "items", List.of(item),
-                "external_reference",
-                "GYSELMOOD-PEDIDO-" + pedidoId
-        );
-
+        	    "items", List.of(item),
+        	    "external_reference",
+        	    "GYSELMOOD-PEDIDO-" + pedidoId,
+        	    "notification_url",
+        	    "https://api-rest-gyselmood-app-production.up.railway.app/api/mercadopago/webhook"
+        	);
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> respuesta = restClient.post()
