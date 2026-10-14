@@ -198,6 +198,45 @@ public class MercadoPagoWebhookController {
             );
         }
 
+
+System.out.println("========== DIAGNOSTICO HMAC ==========");
+
+System.out.println(
+        "Secret configurado: " + tieneTexto(secreto)
+);
+
+System.out.println(
+        "X-Signature presente: " + tieneTexto(xSignature)
+);
+
+System.out.println(
+        "X-Request-Id presente: " + tieneTexto(xRequestId)
+);
+
+System.out.println(
+        "Data ID URL: " + dataId
+);
+
+System.out.println(
+        "Data ID BODY coincide: "
+        + (tieneTexto(bodyId) && bodyId.equals(dataId))
+);
+
+if (tieneTexto(xSignature)) {
+
+    boolean tieneTimestamp =
+            xSignature.matches("(?s).*\\bts=[0-9]+.*");
+
+    boolean tieneV1 =
+            xSignature.matches("(?s).*\\bv1=[0-9a-fA-F]{64}.*");
+
+    System.out.println("Timestamp presente: " + tieneTimestamp);
+    System.out.println("Firma V1 presente: " + tieneV1);
+}
+
+System.out.println("=====================================");
+
+        
         System.out.println(
                 "Firma HMAC valida: " + firmaValida
         );
