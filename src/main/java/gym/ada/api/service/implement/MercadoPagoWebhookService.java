@@ -15,7 +15,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
-
+import java.util.List;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -212,4 +213,104 @@ public class MercadoPagoWebhookService {
 
         return "PAGO_REGISTRADO";
     }
+    
+
+public String conciliarPedido(Long pedidoId) {
+
+    // 1. Comprobar que el pedido existe
+    Pedido pedido = pedidoRepository.findById(pedidoId)
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Pedido no encontrado"
+            ));
+
+    // 2. Evitar procesar pedidos ya pagados
+    if (pedido.getEstado() == EstadoPedido.PAGADO) {
+        return "YA_PAGADO";
+    }
+
+    if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
+        return "PEDIDO_NO_PENDIENTE";
+    }
+
+    // 3. Buscar la referencia creada por nuestro backend
+    String referencia = "GYSELMOOD-PEDIDO-" + pedidoId;
+
+    String url = UriComponentsBuilder
+            .fromPath("/v1/payments/search")
+            .queryParam("external_reference", referencia)
+            .queryParam("sort", "date_created")
+            .queryParam("criteria", "desc")
+            .queryParam("limit", 50)
+            .build()
+            .toUriString();
+
+    Map<String, Object> respuesta;
+
+    try {
+        respuesta = restClient.get()
+                .uri(url)
+                .retrieve()
+                .body(Map.class);
+
+    } catch (RestClientException e) {
+        throw new ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Error consultando pagos en Mercado Pago",
+                e
+        );
+    }
+
+    if (respuesta == null) {
+        return "SIN_RESULTADOS";
+    }
+
+    Object resultados = respuesta.get("results");
+
+    if (!(resultados instanceof List<?> pagos)) {
+        return "SIN_RESULTADOS";
+    }
+
+    // 4. Revisar pagos aprobados
+    for (Object elemento : pagos) {
+
+        if (!(elemento instanceof Map<?, ?> pago)) {
+            continue;
+        }
+
+        String estado = String.valueOf(pago.get("status"));
+
+        if (!"approved".equalsIgnoreCase(estado)) {
+            continue;
+        }
+
+        // Comprobar que la referencia coincida
+        String referenciaPago = String.valueOf(
+                pago.get("external_reference")
+        );
+
+        if (!referencia.equals(referenciaPago)) {
+            continue;
+        }
+
+        String paymentId = String.valueOf(pago.get("id"));
+
+        if (!paymentId.matches("[0-9]+")) {
+            continue;
+        }
+
+        // 5. Reutilizar todas nuestras validaciones
+        String resultado = procesarPago(paymentId);
+
+        if ("PAGO_REGISTRADO".equals(resultado)
+                || "YA_PROCESADO".equals(resultado)) {
+
+            return resultado;
+        }
+    }
+
+    return "SIN_PAGO_APROBADO";
+}
+
+    
 }
