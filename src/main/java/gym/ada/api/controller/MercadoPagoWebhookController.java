@@ -20,392 +20,276 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/mercadopago/webhook")
 public class MercadoPagoWebhookController {
 
-    private final MercadoPagoWebhookService webhookService;
-
-    public MercadoPagoWebhookController(
-            MercadoPagoWebhookService webhookService
-    ) {
-        this.webhookService = webhookService;
-    }
-
-    @PostMapping
-    public ResponseEntity<Void> recibirNotificacion(
-
-            @RequestHeader(
-                    value = "x-signature",
-                    required = false
-            )
-            String xSignature,
-
-            @RequestHeader(
-                    value = "x-request-id",
-                    required = false
-            )
-            String xRequestId,
-
-            @RequestParam(
-                    value = "data.id",
-                    required = false
-            )
-            String dataId,
+	private final MercadoPagoWebhookService webhookService;
 
-            @RequestParam(
-                    value = "type",
-                    required = false
-            )
-            String type,
+	public MercadoPagoWebhookController(MercadoPagoWebhookService webhookService) {
+		this.webhookService = webhookService;
+	}
 
-            @RequestParam(
-                    value = "id",
-                    required = false
-            )
-            String ipnId,
+	@PostMapping
+	public ResponseEntity<Void> recibirNotificacion(
 
-            @RequestParam(
-                    value = "topic",
-                    required = false
-            )
-            String topic,
+			@RequestHeader(value = "x-signature", required = false) String xSignature,
 
-            @RequestBody(required = false)
-            Map<String, Object> body
-    ) {
+			@RequestHeader(value = "x-request-id", required = false) String xRequestId,
 
-        System.out.println();
-        System.out.println("========== WEBHOOK MERCADO PAGO ==========");
+			@RequestParam(value = "data.id", required = false) String dataId,
 
-        String secreto = System.getenv(
-                "MERCADOPAGO_WEBHOOK_SECRET"
-        );
+			@RequestParam(value = "type", required = false) String type,
 
-        boolean recuperacionPruebas = Boolean.parseBoolean(
-                System.getenv(
-                        "MERCADOPAGO_TEST_RECONCILE_UNSIGNED"
-                )
-        );
+			@RequestParam(value = "id", required = false) String ipnId,
 
-        // Esta opcion debe usarse SOLO con una
-        // cuenta vendedora de prueba configurada.
-        boolean vendedorPruebaConfigurado = tieneTexto(
-                System.getenv("MERCADOPAGO_TEST_SELLER_ID")
-        );
+			@RequestParam(value = "topic", required = false) String topic,
 
-        boolean recuperacionHabilitada =
-                recuperacionPruebas
-                && vendedorPruebaConfigurado;
+			@RequestBody(required = false) Map<String, Object> body) {
 
-        String bodyId = null;
-        String bodyType = null;
+		System.out.println();
+		System.out.println("========== WEBHOOK MERCADO PAGO ==========");
 
-        if (body != null) {
+		String secreto = System.getenv("MERCADOPAGO_WEBHOOK_SECRET");
 
-            bodyType = texto(body.get("type"));
+		boolean recuperacionPruebas = Boolean.parseBoolean(System.getenv("MERCADOPAGO_TEST_RECONCILE_UNSIGNED"));
 
-            Object data = body.get("data");
+		// Esta opcion debe usarse SOLO con una
+		// cuenta vendedora de prueba configurada.
+		boolean vendedorPruebaConfigurado = tieneTexto(System.getenv("MERCADOPAGO_TEST_SELLER_ID"));
 
-            if (data instanceof Map<?, ?> datos) {
-                bodyId = texto(datos.get("id"));
-            }
-        }
+		boolean recuperacionHabilitada = recuperacionPruebas && vendedorPruebaConfigurado;
 
-        // ======================================
-        // 1. IDENTIFICAR FORMATO
-        // ======================================
+		String bodyId = null;
+		String bodyType = null;
 
-        boolean esWebhook = tieneTexto(dataId);
-        boolean esIpn = !esWebhook && tieneTexto(ipnId);
+		if (body != null) {
 
-        String paymentId = esWebhook ? dataId : ipnId;
+			bodyType = texto(body.get("type"));
 
-        String tipoEvento = esWebhook
-                ? (tieneTexto(type) ? type : bodyType)
-                : topic;
+			Object data = body.get("data");
 
-        System.out.println("Formato: "
-                + (esWebhook ? "WEBHOOK"
-                : esIpn ? "IPN" : "DESCONOCIDO"));
+			if (data instanceof Map<?, ?> datos) {
+				bodyId = texto(datos.get("id"));
+			}
+		}
 
-        System.out.println("Payment ID: " + paymentId);
-        System.out.println("Tipo: " + tipoEvento);
+		// ======================================
+		// 1. IDENTIFICAR FORMATO
+		// ======================================
 
-        if (!esWebhook && !esIpn) {
+		boolean esWebhook = tieneTexto(dataId);
+		boolean esIpn = !esWebhook && tieneTexto(ipnId);
 
-            System.out.println(
-                    "WEBHOOK: identificador ausente"
-            );
+		String paymentId = esWebhook ? dataId : ipnId;
 
-            return ResponseEntity.badRequest().build();
-        }
+		String tipoEvento = esWebhook ? (tieneTexto(type) ? type : bodyType) : topic;
 
-        if (!tieneTexto(paymentId)
-                || !paymentId.matches("[0-9]+")) {
+		System.out.println("Formato: " + (esWebhook ? "WEBHOOK" : esIpn ? "IPN" : "DESCONOCIDO"));
 
-            System.out.println(
-                    "WEBHOOK: identificador invalido"
-            );
+		System.out.println("Payment ID: " + paymentId);
+		System.out.println("Tipo: " + tipoEvento);
 
-            return ResponseEntity.badRequest().build();
-        }
+		if (!esWebhook && !esIpn) {
 
-        if (!"payment".equalsIgnoreCase(tipoEvento)) {
+			System.out.println("WEBHOOK: identificador ausente");
 
-            System.out.println(
-                    "WEBHOOK: evento ignorado"
-            );
+			return ResponseEntity.badRequest().build();
+		}
 
-            return ResponseEntity.ok().build();
-        }
+		if (!tieneTexto(paymentId) || !paymentId.matches("[0-9]+")) {
 
-        // Comprobar coherencia entre URL y cuerpo.
-        if (esWebhook && tieneTexto(bodyId)
-                && !dataId.equals(bodyId)) {
+			System.out.println("WEBHOOK: identificador invalido");
 
-            System.out.println(
-                    "WEBHOOK: IDs diferentes"
-            );
+			return ResponseEntity.badRequest().build();
+		}
 
-            return ResponseEntity.badRequest().build();
-        }
+		if (!"payment".equalsIgnoreCase(tipoEvento)) {
 
-        if (esWebhook
-                && tieneTexto(type)
-                && tieneTexto(bodyType)
-                && !type.equalsIgnoreCase(bodyType)) {
+			System.out.println("WEBHOOK: evento ignorado");
 
-            System.out.println(
-                    "WEBHOOK: tipos inconsistentes"
-            );
+			return ResponseEntity.ok().build();
+		}
 
-            return ResponseEntity.badRequest().build();
-        }
+		// Comprobar coherencia entre URL y cuerpo.
+		if (esWebhook && tieneTexto(bodyId) && !dataId.equals(bodyId)) {
 
-        // ======================================
-        // 2. VALIDAR FIRMA
-        // ======================================
+			System.out.println("WEBHOOK: IDs diferentes");
 
-        boolean firmaValida = false;
+			return ResponseEntity.badRequest().build();
+		}
 
-        if (esWebhook
-                && tieneTexto(secreto)
-                && tieneTexto(xSignature)
-                && tieneTexto(xRequestId)) {
+		if (esWebhook && tieneTexto(type) && tieneTexto(bodyType) && !type.equalsIgnoreCase(bodyType)) {
 
-            firmaValida = validarFirma(
-                    xSignature,
-                    xRequestId,
-                    dataId,
-                    secreto
-            );
-        }
+			System.out.println("WEBHOOK: tipos inconsistentes");
 
+			return ResponseEntity.badRequest().build();
+		}
 
-System.out.println("========== DIAGNOSTICO HMAC ==========");
+		// ======================================
+		// 2. VALIDAR FIRMA
+		// ======================================
 
-System.out.println(
-        "Secret configurado: " + tieneTexto(secreto)
-);
+		boolean firmaValida = false;
 
-System.out.println(
-        "X-Signature presente: " + tieneTexto(xSignature)
-);
+		if (esWebhook && tieneTexto(secreto) && tieneTexto(xSignature) && tieneTexto(xRequestId)) {
 
-System.out.println(
-        "X-Request-Id presente: " + tieneTexto(xRequestId)
-);
+			firmaValida = validarFirma(xSignature, xRequestId, dataId, secreto);
+		}
 
-System.out.println(
-        "Data ID URL: " + dataId
-);
+		System.out.println("========== DIAGNOSTICO HMAC ==========");
 
-System.out.println(
-        "Data ID BODY coincide: "
-        + (tieneTexto(bodyId) && bodyId.equals(dataId))
-);
+		System.out.println("Secret configurado: " + tieneTexto(secreto));
 
-if (tieneTexto(xSignature)) {
+		System.out.println("X-Signature presente: " + tieneTexto(xSignature));
 
-    boolean tieneTimestamp =
-            xSignature.matches("(?s).*\\bts=[0-9]+.*");
+		System.out.println("X-Request-Id presente: " + tieneTexto(xRequestId));
 
-    boolean tieneV1 =
-            xSignature.matches("(?s).*\\bv1=[0-9a-fA-F]{64}.*");
+		System.out.println("Data ID URL: " + dataId);
 
-    System.out.println("Timestamp presente: " + tieneTimestamp);
-    System.out.println("Firma V1 presente: " + tieneV1);
-}
+		System.out.println("Data ID BODY coincide: " + (tieneTexto(bodyId) && bodyId.equals(dataId)));
 
-System.out.println("=====================================");
+		if (tieneTexto(xSignature)) {
 
-        
-        System.out.println(
-                "Firma HMAC valida: " + firmaValida
-        );
+			boolean tieneTimestamp = xSignature.matches("(?s).*\\bts=[0-9]+.*");
 
-        // ======================================
-        // 3. DECIDIR SI PROCESAR
-        // ======================================
+			boolean tieneV1 = xSignature.matches("(?s).*\\bv1=[0-9a-fA-F]{64}.*");
 
-        if (!firmaValida) {
+			System.out.println("Timestamp presente: " + tieneTimestamp);
+			System.out.println("Firma V1 presente: " + tieneV1);
+		}
 
-            if (!recuperacionHabilitada) {
+		System.out.println("=====================================");
 
-                System.out.println(
-                        "WEBHOOK: firma no validada. "
-                        + "Procesamiento bloqueado."
-                );
+		String secretoProduccion = System.getenv("MERCADOPAGO_WEBHOOK_SECRET_PROD_DIAG");
 
-                if (!tieneTexto(secreto) && esWebhook) {
-                    return ResponseEntity.status(
-                            HttpStatus.SERVICE_UNAVAILABLE
-                    ).build();
-                }
+		boolean firmaConProduccion = false;
 
-                return ResponseEntity.status(
-                        HttpStatus.UNAUTHORIZED
-                ).build();
-            }
+		if (esWebhook && tieneTexto(secretoProduccion) && tieneTexto(xSignature) && tieneTexto(xRequestId)) {
 
-            // IMPORTANTE:
-            // Esta ruta NO autentica la notificacion.
-            // Solo permite consultar el pago mediante
-            // el Access Token de nuestro backend.
-            //
-            // MercadoPagoWebhookService debe verificar:
-            // - Identidad del vendedor de prueba
-            // - Estado approved
-            // - Referencia del pedido
-            // - Moneda PEN
-            // - Importe exacto
-            // - Duplicados y estado del pedido
+			firmaConProduccion = validarFirma(xSignature, xRequestId, dataId, secretoProduccion);
+		}
 
-            System.out.println(
-                    "MODO PRUEBA: recuperacion mediante "
-                    + "API oficial de Mercado Pago"
-            );
-        } else {
+		System.out.println("HMAC con clave PRUEBA: " + firmaValida);
 
-            System.out.println(
-                    "WEBHOOK: firma verificada correctamente"
-            );
-        }
+		System.out.println("HMAC con clave PRODUCCION: " + firmaConProduccion);
 
-        // ======================================
-        // 4. CONSULTAR Y REGISTRAR PAGO
-        // ======================================
+		System.out.println("Firma HMAC valida: " + firmaValida);
 
-        System.out.println(
-                "Consultando pago: " + paymentId
-        );
+		// ======================================
+		// 3. DECIDIR SI PROCESAR
+		// ======================================
 
-        String resultado = webhookService.procesarPago(
-                paymentId
-        );
+		if (!firmaValida) {
 
-        System.out.println(
-                "WEBHOOK RESULTADO: " + resultado
-        );
+			if (!recuperacionHabilitada) {
 
-        System.out.println(
-                "====================================="
-        );
+				System.out.println("WEBHOOK: firma no validada. " + "Procesamiento bloqueado.");
 
-        return ResponseEntity.ok().build();
-    }
+				if (!tieneTexto(secreto) && esWebhook) {
+					return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+				}
 
-    // ==========================================
-    // 5. VALIDACION HMAC-SHA256
-    // ==========================================
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+			}
 
-    private boolean validarFirma(
-            String xSignature,
-            String xRequestId,
-            String paymentId,
-            String secreto
-    ) {
+			// IMPORTANTE:
+			// Esta ruta NO autentica la notificacion.
+			// Solo permite consultar el pago mediante
+			// el Access Token de nuestro backend.
+			//
+			// MercadoPagoWebhookService debe verificar:
+			// - Identidad del vendedor de prueba
+			// - Estado approved
+			// - Referencia del pedido
+			// - Moneda PEN
+			// - Importe exacto
+			// - Duplicados y estado del pedido
 
-        try {
+			System.out.println("MODO PRUEBA: recuperacion mediante " + "API oficial de Mercado Pago");
+		} else {
 
-            String timestamp = null;
-            String firmaRecibida = null;
+			System.out.println("WEBHOOK: firma verificada correctamente");
+		}
 
-            for (String parte : xSignature.split(",")) {
+		// ======================================
+		// 4. CONSULTAR Y REGISTRAR PAGO
+		// ======================================
 
-                String[] datos = parte.trim().split("=", 2);
+		System.out.println("Consultando pago: " + paymentId);
 
-                if (datos.length != 2) {
-                    continue;
-                }
+		String resultado = webhookService.procesarPago(paymentId);
 
-                String clave = datos[0].trim();
-                String valor = datos[1].trim();
+		System.out.println("WEBHOOK RESULTADO: " + resultado);
 
-                if ("ts".equals(clave)) {
-                    timestamp = valor;
-                }
+		System.out.println("=====================================");
 
-                if ("v1".equals(clave)) {
-                    firmaRecibida = valor;
-                }
-            }
+		return ResponseEntity.ok().build();
+	}
 
-            if (!tieneTexto(timestamp)
-                    || !timestamp.matches("[0-9]+")
-                    || !tieneTexto(firmaRecibida)
-                    || !firmaRecibida.matches(
-                            "[0-9a-fA-F]{64}"
-                    )) {
+	// ==========================================
+	// 5. VALIDACION HMAC-SHA256
+	// ==========================================
 
-                return false;
-            }
+	private boolean validarFirma(String xSignature, String xRequestId, String paymentId, String secreto) {
 
-            String manifest =
-                    "id:"
-                    + paymentId.toLowerCase(Locale.ROOT)
-                    + ";request-id:"
-                    + xRequestId
-                    + ";ts:"
-                    + timestamp
-                    + ";";
+		try {
 
-            Mac mac = Mac.getInstance("HmacSHA256");
+			String timestamp = null;
+			String firmaRecibida = null;
 
-            mac.init(new SecretKeySpec(
-                    secreto.getBytes(StandardCharsets.UTF_8),
-                    "HmacSHA256"
-            ));
+			for (String parte : xSignature.split(",")) {
 
-            byte[] calculada = mac.doFinal(
-                    manifest.getBytes(StandardCharsets.UTF_8)
-            );
+				String[] datos = parte.trim().split("=", 2);
 
-            byte[] recibida = HexFormat.of()
-                    .parseHex(firmaRecibida);
+				if (datos.length != 2) {
+					continue;
+				}
 
-            return MessageDigest.isEqual(
-                    calculada,
-                    recibida
-            );
+				String clave = datos[0].trim();
+				String valor = datos[1].trim();
 
-        } catch (Exception e) {
+				if ("ts".equals(clave)) {
+					timestamp = valor;
+				}
 
-            System.err.println(
-                    "WEBHOOK: error calculando firma: "
-                    + e.getClass().getSimpleName()
-            );
+				if ("v1".equals(clave)) {
+					firmaRecibida = valor;
+				}
+			}
 
-            return false;
-        }
-    }
+			if (!tieneTexto(timestamp) || !timestamp.matches("[0-9]+") || !tieneTexto(firmaRecibida)
+					|| !firmaRecibida.matches("[0-9a-fA-F]{64}")) {
 
-    // ==========================================
-    // 6. AUXILIARES
-    // ==========================================
+				return false;
+			}
 
-    private boolean tieneTexto(String valor) {
-        return valor != null && !valor.isBlank();
-    }
+			String manifest = "id:" + paymentId.toLowerCase(Locale.ROOT) + ";request-id:" + xRequestId + ";ts:"
+					+ timestamp + ";";
 
-    private String texto(Object valor) {
-        return valor == null ? null : valor.toString();
-    }
+			Mac mac = Mac.getInstance("HmacSHA256");
+
+			mac.init(new SecretKeySpec(secreto.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+
+			byte[] calculada = mac.doFinal(manifest.getBytes(StandardCharsets.UTF_8));
+
+			byte[] recibida = HexFormat.of().parseHex(firmaRecibida);
+
+			return MessageDigest.isEqual(calculada, recibida);
+
+		} catch (Exception e) {
+
+			System.err.println("WEBHOOK: error calculando firma: " + e.getClass().getSimpleName());
+
+			return false;
+		}
+	}
+
+	// ==========================================
+	// 6. AUXILIARES
+	// ==========================================
+
+	private boolean tieneTexto(String valor) {
+		return valor != null && !valor.isBlank();
+	}
+
+	private String texto(Object valor) {
+		return valor == null ? null : valor.toString();
+	}
 }
