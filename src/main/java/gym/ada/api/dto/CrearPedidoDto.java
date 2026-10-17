@@ -1,6 +1,8 @@
 package gym.ada.api.dto;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -19,6 +21,16 @@ public class CrearPedidoDto {
     private String direccionEntrega;
 
     private String referencia;
+    
+    @NotNull
+    @DecimalMin("-90.0")
+    @DecimalMax("90.0")
+    private Double latitudEntrega;
+
+    @NotNull
+    @DecimalMin("-180.0")
+    @DecimalMax("180.0")
+    private Double longitudEntrega;
 
     @NotNull
     private BigDecimal costoEnvio;
@@ -66,4 +78,21 @@ public class CrearPedidoDto {
     public void setProductos(List<DetallePedidoDto> productos) {
         this.productos = productos;
     }
+
+public Double getLatitudEntrega() {
+    return latitudEntrega;
+}
+
+public void setLatitudEntrega(Double latitudEntrega) {
+    this.latitudEntrega = latitudEntrega;
+}
+
+public Double getLongitudEntrega() {
+    return longitudEntrega;
+}
+
+public void setLongitudEntrega(Double longitudEntrega) {
+    this.longitudEntrega = longitudEntrega;
+}
+
 }

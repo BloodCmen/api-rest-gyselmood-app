@@ -39,6 +39,13 @@ public class Pedido {
 
     @Column(length = 300)
     private String referencia;
+    
+ // Coordenadas de entrega seleccionadas en el mapa
+    @Column(name = "latitud_entrega")
+    private Double latitudEntrega;
+
+    @Column(name = "longitud_entrega")
+    private Double longitudEntrega;
 
     @Column(nullable = false)
     private LocalDateTime fechaCreacion;
@@ -172,5 +179,20 @@ public class Pedido {
 		this.historialEstados = historialEstados;
 	}
     
+	public Double getLatitudEntrega() {
+	    return latitudEntrega;
+	}
+
+	public void setLatitudEntrega(Double latitudEntrega) {
+	    this.latitudEntrega = latitudEntrega;
+	}
+
+	public Double getLongitudEntrega() {
+	    return longitudEntrega;
+	}
+
+	public void setLongitudEntrega(Double longitudEntrega) {
+	    this.longitudEntrega = longitudEntrega;
+	}
     
 }

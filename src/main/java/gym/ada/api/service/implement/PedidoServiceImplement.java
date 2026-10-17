@@ -62,6 +62,12 @@ public class PedidoServiceImplement implements IPedidoService {
         pedido.setDireccionEntrega(dto.getDireccionEntrega());
         pedido.setReferencia(dto.getReferencia());
         pedido.setCostoEnvio(dto.getCostoEnvio());
+        
+     // Ubicación del mapa
+        pedido.setLatitudEntrega(dto.getLatitudEntrega());
+        pedido.setLongitudEntrega(dto.getLongitudEntrega());
+
+        pedido.setCostoEnvio(dto.getCostoEnvio());
 
         pedido.setEstado(EstadoPedido.PENDIENTE);
 
